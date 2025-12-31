@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+=<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -89,8 +89,12 @@
             opacity: 0;
             transition: opacity 0.3s ease;
         }
-        #buttonContainer:hover button {
-            opacity: 1 !important;
+        
+        /* 데스크톱에서만 호버 효과 적용 */
+        @media (hover: hover) and (pointer: fine) {
+            #buttonContainer:hover button {
+                opacity: 1 !important;
+            }
         }
         #speedControl {
             position: absolute;
@@ -407,37 +411,45 @@
             }
         });
         
-        // 데스크톱: 마우스 호버로 버튼 표시
-        buttonContainer.addEventListener('mouseenter', function() {
-            if (isHidden) {
-                this.classList.remove('buttons-hidden');
-            }
-        });
+        // 데스크톱: 마우스 호버로 버튼 표시 (호버 지원 장치만)
+        if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+            buttonContainer.addEventListener('mouseenter', function() {
+                if (isHidden) {
+                    this.classList.remove('buttons-hidden');
+                }
+            });
+            
+            buttonContainer.addEventListener('mouseleave', function() {
+                if (isHidden) {
+                    this.classList.add('buttons-hidden');
+                }
+            });
+        }
         
-        buttonContainer.addEventListener('mouseleave', function() {
-            if (isHidden) {
-                this.classList.add('buttons-hidden');
-            }
-        });
-        
-        // 모바일: 터치 이벤트
+        // 모바일: 터치 이벤트로 버튼 임시 표시
         let touchTimeout;
+        let isShowingButtons = false;
+        
         buttonContainer.addEventListener('touchstart', function(e) {
-            if (isHidden) {
+            e.stopPropagation();
+            if (isHidden && !isShowingButtons) {
+                isShowingButtons = true;
                 this.classList.remove('buttons-hidden');
                 clearTimeout(touchTimeout);
                 touchTimeout = setTimeout(() => {
                     if (isHidden) {
                         this.classList.add('buttons-hidden');
+                        isShowingButtons = false;
                     }
                 }, 3000);
             }
         });
         
-        // 화면 터치로 버튼 숨기기 (버튼 영역 외부)
+        // 화면 터치로 버튼 즉시 숨기기
         document.addEventListener('touchstart', function(e) {
             if (isHidden && !buttonContainer.contains(e.target) && !speedControl.contains(e.target)) {
                 buttonContainer.classList.add('buttons-hidden');
+                isShowingButtons = false;
                 clearTimeout(touchTimeout);
             }
         });

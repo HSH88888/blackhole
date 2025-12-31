@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>실제 블랙홀 기반 3D 시뮬레이션</title>
     <style>
         body { 
@@ -9,6 +10,7 @@
             overflow: hidden; 
             background-color: #000; 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none;
         }
         canvas { display: block; }
         #info {
@@ -90,15 +92,6 @@
         #buttonContainer:hover button {
             opacity: 1 !important;
         }
-        #hoverArea {
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            width: 400px;
-            height: 200px;
-            pointer-events: none;
-            z-index: 999;
-        }
         #speedControl {
             position: absolute;
             bottom: 70px;
@@ -114,6 +107,7 @@
             transform: translateY(10px);
             transition: opacity 0.3s ease, transform 0.3s ease;
             min-width: 180px;
+            z-index: 1000;
         }
         #speedControl.show {
             display: block;
@@ -184,6 +178,27 @@
             font-size: 11px;
             margin-top: 5px;
             text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            #info h1 {
+                font-size: 20px;
+            }
+            #info p {
+                font-size: 12px;
+            }
+            #buttonContainer {
+                flex-direction: column;
+                gap: 8px;
+            }
+            #rotateBtn, #hideBtn {
+                padding: 10px 20px;
+                font-size: 13px;
+            }
+            #speedControl {
+                bottom: 110px;
+                min-width: 160px;
+            }
         }
     </style>
 </head>
@@ -378,7 +393,7 @@
             if (isHidden) {
                 infoDiv.classList.add('hidden');
                 controlsDiv.classList.add('hidden');
-                speedControl.classList.add('hidden');
+                speedControl.classList.remove('show');
                 buttonContainer.classList.add('buttons-hidden');
                 this.textContent = '👁️ 보이기';
             } else {
@@ -392,7 +407,7 @@
             }
         });
         
-        // 마우스 호버로 버튼 표시
+        // 데스크톱: 마우스 호버로 버튼 표시
         buttonContainer.addEventListener('mouseenter', function() {
             if (isHidden) {
                 this.classList.remove('buttons-hidden');
@@ -402,6 +417,28 @@
         buttonContainer.addEventListener('mouseleave', function() {
             if (isHidden) {
                 this.classList.add('buttons-hidden');
+            }
+        });
+        
+        // 모바일: 터치 이벤트
+        let touchTimeout;
+        buttonContainer.addEventListener('touchstart', function(e) {
+            if (isHidden) {
+                this.classList.remove('buttons-hidden');
+                clearTimeout(touchTimeout);
+                touchTimeout = setTimeout(() => {
+                    if (isHidden) {
+                        this.classList.add('buttons-hidden');
+                    }
+                }, 3000);
+            }
+        });
+        
+        // 화면 터치로 버튼 숨기기 (버튼 영역 외부)
+        document.addEventListener('touchstart', function(e) {
+            if (isHidden && !buttonContainer.contains(e.target) && !speedControl.contains(e.target)) {
+                buttonContainer.classList.add('buttons-hidden');
+                clearTimeout(touchTimeout);
             }
         });
 

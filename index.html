@@ -1,25 +1,25 @@
-=<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>실제 블랙홀 기반 3D 시뮬레이션</title>
     <style>
-        body { 
-            margin: 0; 
-            overflow: hidden; 
-            background-color: #000; 
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             touch-action: none;
         }
         canvas { display: block; }
         #info {
             position: absolute;
-            top: 20px; 
+            top: 20px;
             left: 20px;
             right: 20px;
             color: #ddd;
-            pointer-events: none; 
+            pointer-events: none;
             user-select: none;
             text-shadow: 2px 2px 4px #000;
             max-width: 500px;
@@ -50,10 +50,11 @@
             bottom: 20px;
             right: 20px;
             display: flex;
+            flex-direction: column;
             gap: 10px;
             z-index: 1000;
         }
-        #rotateBtn, #hideBtn {
+        #rotateBtn, #hideBtn, #screenshotBtn {
             padding: 12px 24px;
             background: linear-gradient(135deg, #ff6600, #ff9944);
             color: white;
@@ -66,12 +67,12 @@
             transition: all 0.3s ease;
             pointer-events: auto;
         }
-        #rotateBtn:hover, #hideBtn:hover {
+        #rotateBtn:hover, #hideBtn:hover, #screenshotBtn:hover {
             background: linear-gradient(135deg, #ff7722, #ffaa55);
             box-shadow: 0 6px 16px rgba(255, 102, 0, 0.6);
             transform: translateY(-2px);
         }
-        #rotateBtn:active, #hideBtn:active {
+        #rotateBtn:active, #hideBtn:active, #screenshotBtn:active {
             transform: translateY(0);
         }
         #hideBtn {
@@ -79,6 +80,13 @@
         }
         #hideBtn:hover {
             background: linear-gradient(135deg, #777, #aaa);
+        }
+        #screenshotBtn {
+            background: linear-gradient(135deg, #0066ff, #4499ff);
+        }
+        #screenshotBtn:hover {
+            background: linear-gradient(135deg, #2277ff, #55aaff);
+            box-shadow: 0 6px 16px rgba(0, 102, 255, 0.6);
         }
         .hidden {
             opacity: 0 !important;
@@ -89,7 +97,7 @@
             opacity: 0;
             transition: opacity 0.3s ease;
         }
-        
+       
         /* 데스크톱에서만 호버 효과 적용 */
         @media (hover: hover) and (pointer: fine) {
             #buttonContainer:hover button {
@@ -183,7 +191,7 @@
             margin-top: 5px;
             text-align: center;
         }
-        
+       
         @media (max-width: 768px) {
             #info h1 {
                 font-size: 20px;
@@ -192,15 +200,14 @@
                 font-size: 12px;
             }
             #buttonContainer {
-                flex-direction: column;
                 gap: 8px;
             }
-            #rotateBtn, #hideBtn {
+            #rotateBtn, #hideBtn, #screenshotBtn {
                 padding: 10px 20px;
                 font-size: 13px;
             }
             #speedControl {
-                bottom: 110px;
+                bottom: 150px;
                 min-width: 160px;
             }
         }
@@ -212,16 +219,17 @@
         <p>EHT(Event Horizon Telescope)가 촬영한 실제 블랙홀을 기반으로 제작되었습니다.</p>
         <p style="font-size: 12px; color: #888;">중앙: 사건의 지평선 그림자 | 주변: 고온 플라즈마 강착 원반</p>
     </div>
-    
+   
     <div id="controls">
         마우스 드래그: 회전 | 휠: 줌 조작
     </div>
-    
+   
     <div id="buttonContainer">
         <button id="rotateBtn">🌀 자동 회전</button>
+        <button id="screenshotBtn">📸 스크린샷</button>
         <button id="hideBtn">👁️ 숨기기</button>
     </div>
-    
+   
     <div id="speedControl">
         <label>회전 속도</label>
         <div id="speedInputContainer">
@@ -231,54 +239,48 @@
         <input type="range" id="speedSlider" min="1" max="100" value="20" step="1">
         <div id="speedValue">느림</div>
     </div>
-    
+   
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-
     <script>
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x000000);
         scene.fog = new THREE.FogExp2(0x000000, 0.003);
-
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(0, 8, 35);
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const renderer = new THREE.WebGLRenderer({ 
+            antialias: true,
+            preserveDrawingBuffer: true
+        });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.toneMapping = THREE.ReinhardToneMapping;
         renderer.toneMappingExposure = 1.8;
         document.body.appendChild(renderer.domElement);
-
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
         controls.minDistance = 15;
         controls.maxDistance = 200;
-
         let autoRotating = false;
         let rotationSpeed = 0.0002;
-
         // 사건의 지평선
         const bhGeo = new THREE.SphereGeometry(2.5, 64, 64);
         const bhMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
         const blackHole = new THREE.Mesh(bhGeo, bhMat);
         scene.add(blackHole);
-
         // 강착 원반
         const diskGroup = new THREE.Group();
         const colors = [0xffffff, 0xffdd88, 0xff8800, 0xcc2200, 0x550000];
-
         for(let i = 0; i < 120; i++) {
             const t = i / 120;
             const innerRad = 2.6 + t * 0.5;
             const outerRad = 3.5 + t * 4.0 * Math.pow(t, 0.5);
-            
+           
             const ringGeo = new THREE.RingGeometry(innerRad, outerRad, 64, 1);
-            
+           
             const colorIndex = Math.floor(t * (colors.length - 1));
             const ringColor = new THREE.Color(colors[colorIndex]);
             const opacity = (1 - t) * 0.15;
-
             const ringMat = new THREE.MeshBasicMaterial({
                 color: ringColor,
                 side: THREE.DoubleSide,
@@ -287,19 +289,17 @@
                 blending: THREE.AdditiveBlending,
                 depthWrite: false
             });
-
             const ring = new THREE.Mesh(ringGeo, ringMat);
             ring.rotation.x = Math.PI / 2;
             ring.rotation.y = (Math.random() - 0.5) * 0.1;
             diskGroup.add(ring);
         }
-        
+       
         scene.add(diskGroup);
-
         // 광자 구 글로우
         const glowGeo = new THREE.SphereGeometry(2.7, 64, 64);
         const glowMat = new THREE.ShaderMaterial({
-            uniforms: { 
+            uniforms: {
                 c: { type: "f", value: 0.3 },
                 p: { type: "f", value: 3.0 },
                 glowColor: { type: "c", value: new THREE.Color(0xffaa55) },
@@ -327,10 +327,9 @@
             blending: THREE.AdditiveBlending,
             transparent: true
         });
-        
+       
         const glowMesh = new THREE.Mesh(glowGeo, glowMat);
         scene.add(glowMesh);
-
         // 우주 배경 별
         const starsGeo = new THREE.BufferGeometry();
         const starsCount = 15000;
@@ -340,46 +339,44 @@
         }
         starsGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
         const starsMat = new THREE.PointsMaterial({
-            size: 0.15, 
+            size: 0.15,
             color: 0xaaaaaa
         });
         const starField = new THREE.Points(starsGeo, starsMat);
         scene.add(starField);
-
         // 애니메이션 루프
         function animate() {
             requestAnimationFrame(animate);
-            
+           
             if (autoRotating) {
                 const radius = Math.sqrt(camera.position.x ** 2 + camera.position.z ** 2);
                 const angle = Math.atan2(camera.position.z, camera.position.x);
                 const newAngle = angle + rotationSpeed;
-                
+               
                 camera.position.x = radius * Math.cos(newAngle);
                 camera.position.z = radius * Math.sin(newAngle);
                 camera.lookAt(0, 0, 0);
             }
-            
+           
             glowMat.uniforms.viewVector.value = new THREE.Vector3().subVectors(camera.position, glowMesh.position);
-
             controls.update();
             renderer.render(scene, camera);
         }
         animate();
-
         // 버튼 이벤트
         const rotateBtn = document.getElementById('rotateBtn');
+        const screenshotBtn = document.getElementById('screenshotBtn');
         const speedControl = document.getElementById('speedControl');
         const hideBtn = document.getElementById('hideBtn');
         const infoDiv = document.getElementById('info');
         const controlsDiv = document.getElementById('controls');
         const buttonContainer = document.getElementById('buttonContainer');
-        
+       
         let isHidden = false;
-        
+       
         rotateBtn.addEventListener('click', function() {
             autoRotating = !autoRotating;
-            
+           
             if (autoRotating) {
                 this.textContent = '⏸️ 회전 중지';
                 speedControl.classList.add('show');
@@ -387,13 +384,13 @@
                 this.textContent = '🌀 자동 회전';
                 speedControl.classList.remove('show');
             }
-            
+           
             controls.autoRotate = false;
         });
-        
+       
         hideBtn.addEventListener('click', function() {
             isHidden = !isHidden;
-            
+           
             if (isHidden) {
                 infoDiv.classList.add('hidden');
                 controlsDiv.classList.add('hidden');
@@ -410,7 +407,47 @@
                 this.textContent = '👁️ 숨기기';
             }
         });
-        
+       
+        // 스크린샷 기능
+        screenshotBtn.addEventListener('click', function() {
+            // 현재 UI 요소들 숨기기
+            const wasHidden = isHidden;
+            infoDiv.style.display = 'none';
+            controlsDiv.style.display = 'none';
+            buttonContainer.style.display = 'none';
+            speedControl.style.display = 'none';
+           
+            // 약간의 딜레이 후 캡처 (렌더링 완료 보장)
+            setTimeout(() => {
+                // 추가 렌더링 호출로 최신 프레임 보장
+                renderer.render(scene, camera);
+                // Canvas를 이미지로 변환
+                renderer.domElement.toBlob(function(blob) {
+                    // 다운로드 링크 생성
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                    link.download = `M87-blackhole-${timestamp}.png`;
+                    link.href = url;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                   
+                    // UI 요소 복원
+                    infoDiv.style.display = '';
+                    controlsDiv.style.display = '';
+                    buttonContainer.style.display = '';
+                    speedControl.style.display = '';
+                   
+                    // 숨김 상태였다면 다시 숨김 처리
+                    if (wasHidden) {
+                        infoDiv.classList.add('hidden');
+                        controlsDiv.classList.add('hidden');
+                        buttonContainer.classList.add('buttons-hidden');
+                    }
+                }, 'image/png');
+            }, 100);
+        });
+       
         // 데스크톱: 마우스 호버로 버튼 표시 (호버 지원 장치만)
         if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
             buttonContainer.addEventListener('mouseenter', function() {
@@ -418,18 +455,18 @@
                     this.classList.remove('buttons-hidden');
                 }
             });
-            
+           
             buttonContainer.addEventListener('mouseleave', function() {
                 if (isHidden) {
                     this.classList.add('buttons-hidden');
                 }
             });
         }
-        
+       
         // 모바일: 터치 이벤트로 버튼 임시 표시
         let touchTimeout;
         let isShowingButtons = false;
-        
+       
         buttonContainer.addEventListener('touchstart', function(e) {
             e.stopPropagation();
             if (isHidden && !isShowingButtons) {
@@ -444,7 +481,7 @@
                 }, 3000);
             }
         });
-        
+       
         // 화면 터치로 버튼 즉시 숨기기
         document.addEventListener('touchstart', function(e) {
             if (isHidden && !buttonContainer.contains(e.target) && !speedControl.contains(e.target)) {
@@ -453,19 +490,18 @@
                 clearTimeout(touchTimeout);
             }
         });
-
         // 속도 조절
         const speedSlider = document.getElementById('speedSlider');
         const speedInput = document.getElementById('speedInput');
         const speedValue = document.getElementById('speedValue');
-        
+       
         function updateSpeed(value) {
             value = Math.max(1, Math.min(100, value));
             rotationSpeed = Math.pow(10, (value - 1) / 33 - 4);
-            
+           
             speedSlider.value = value;
             speedInput.value = value;
-            
+           
             if (value <= 10) speedValue.textContent = '매우 매우 느림';
             else if (value <= 25) speedValue.textContent = '매우 느림';
             else if (value <= 40) speedValue.textContent = '느림';
@@ -473,17 +509,16 @@
             else if (value <= 80) speedValue.textContent = '빠름';
             else speedValue.textContent = '매우 빠름';
         }
-        
+       
         speedSlider.addEventListener('input', function() {
             updateSpeed(parseInt(this.value));
         });
-        
+       
         speedInput.addEventListener('input', function() {
             updateSpeed(parseInt(this.value) || 1);
         });
-        
+       
         updateSpeed(20);
-
         // 반응형
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
